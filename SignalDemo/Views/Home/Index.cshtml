@@ -1,0 +1,133 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+@*<div class="jumbotron">
+        <h1>ASP.NET</h1>
+        <p class="lead">ASP.NET is a free web framework for building great Web sites and Web applications using HTML, CSS and JavaScript.</p>
+        <p><a href="http://asp.net" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+    </div>*@
+@section scripts
+{
+    <script src="/resource/SignalR/jquery-1.6.4.min.js" type="text/javascript"></script>
+    <script src="/resource/SignalR/jquery.signalR-1.2.2.min.js" type="text/javascript"></script>
+    <script src="/signalr/hubs" type="text/javascript"></script>
+    <script>
+        $(function () {
+            var state = 0,
+                rename;
+
+            if (window.console) {
+                window.console.log($().jquery);
+            }
+
+            // 1、引用自动生成的集线器代理 必须用小写字母开头
+            var pjh = $.connection.progressiveJobHub;
+
+            //进度任务初始化
+            pjh.client.inital = function (jobs) {
+                $("#progress").css("width", "1%").text("初始化");
+            };
+
+            // 2、开始连接服务器 done函数表明建立连接成功后为发送按钮注册了一个click事件
+            $.connection.hub.start().done(function () {
+                $('#execute').click(function () {
+                    rename = $('#message').val();
+                    if (!rename) {
+                        alert("请填写凭证");
+                        return;
+                    }
+                    if (state === 0) {
+                        $('#discussion').append('<li>当前进度: <strong>开始执行</strong></li>');
+                        $('#stop').show();
+                        $('#cancel').show();
+                        state = 1;
+                        // 调用服务器端集线器的Send方法 也要小写开头
+                        pjh.server.send(rename);
+                    }
+                    else if (state === 2) {
+                        $('#discussion').append('<li>当前进度: <strong>继续执行</strong></li>');
+                        pjh.server.reSend(rename);
+                    }
+                    else if (state === 3) {
+                        pjh.server.cancel(rename);
+                        $('#discussion').append('<li>当前进度: <strong>重新执行</strong></li>');
+                        rename = rename + 1;
+                        pjh.server.beSend(rename);
+                    }
+                });
+
+                //暂停
+                $('#stop').click(function () {
+                    pjh.server.stop(rename);
+                    state = 2;
+                    $('#execute')[0].value = "继续执行";
+                    $('#discussion').append('<li>当前进度: <strong>已暂停</strong></li>');
+                });
+
+                //中止
+                $('#cancel').click(function () {
+                    pjh.server.cancel(rename);
+                    state = 3;
+                    $('#execute')[0].value = "重新执行";
+                    $('#discussion').append('<li>当前进度: <strong>已取消</strong></li>');
+                })
+            });
+
+            // 3、定义服务器端调用的客户端sendMessage来显示新消息
+            pjh.client.addorupdate = function (job) {
+                $("#progress").css("width", job.Progress + "%").text(job.Progress + "%");
+                // 向页面添加消息
+                $('#discussion').append('<li>当前进度: <strong>' + htmlEncode(job.Description) + '</strong></li>');
+            };
+
+            //4.任务完成通知
+            pjh.client.finish = function (job) {
+                $('#discussion').append('<li>当前进度: <strong>恭喜你，所有任务已完成</strong></li>');
+            };
+
+            //5.取消
+            pjh.client.cancel = function (id, msg) {
+                $.connection.hub.disconnected();
+            };
+
+            // 设置焦点到输入框
+            $('#message').focus();
+        });
+
+        // 为显示的消息进行Html编码
+        function htmlEncode(value) {
+            var encodedValue = $('<div />').text(value).html();
+            return encodedValue;
+        }
+    </script>
+}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6">
+            <h3> <small>操作栏</small></h3>
+            <label>操作者：</label>
+            <input type="text" id="message" />
+            <input type="button" id="execute" value="执行" />
+            <input type="button" id="stop" style="display:none" value="暂停" />
+            <input type="button" id="cancel" style="display:none" value="中止" />
+        </div>
+        <div class="col-md-6">
+            <h3> <small>进度栏</small></h3>
+            <sapn>任务进度：</sapn>
+            <div class="progress progress-striped active">
+                <div id="progress" class="progress-bar progress-bar-success" role="progressbar"
+                     aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+                     style="width: 0%;">
+                </div>
+            </div>
+
+            <sapn>任务详情：</sapn>
+            <ul id="discussion"></ul>
+
+        </div>
+        <div class="col-md-4">
+
+        </div>
+    </div>
+</div>
