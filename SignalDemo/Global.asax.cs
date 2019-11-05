@@ -12,6 +12,7 @@ namespace SignalDemo
     {
         protected void Application_Start()
         {
+            RouteTable.Routes.MapHubs(); //注册signalRHubs
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
